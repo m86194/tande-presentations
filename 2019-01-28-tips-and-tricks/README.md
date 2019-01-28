@@ -1,12 +1,17 @@
 [//]: # (use pandoc to convert to presentation - https://pandoc.org/MANUAL.html#pandocs-markdown)
 
-# Tips and tricks so far
+# Tips and tricks so far 
+
+Reflections on what the interact-data-service refactoring brought to the table.
+
 Thorbjørn Ravn Andersen
 
 
 <tande@tdc.dk>
 
 2019-01-28
+
+https://github.com/m86194/tande-presentations/tree/master/2019-01-28-tips-and-tricks
 
 ------
 
@@ -26,10 +31,12 @@ Feel free to ask at any time.
 
 # Spring Boot
 
-* Has all the parts for `java -jar`-based micro services in the cloud.
-* Strongly opinionated defaults.
+* Has all the parts for Spring based `java -jar` micro services in the cloud.
+* Strongly opinionated defaults (means less configuration).
+* Spring used to be XML-driven, now everything is `@Annotations`.
 * Almost everything can be overridden.
 * Provides the "are you ok?" health check functionality needed by Liquid, out of the box.
+* Liquid team provides https://bitbucket.tdc.dk/projects/SIR/repos/template-spring-service 
 
 --------
 
@@ -41,14 +48,14 @@ Feel free to ask at any time.
 * `@RestController` classes contains endpoints - each method annotated with `@RestMapping` becomes one.
     * `@ResponseBody` identifies how the return value should be converted to the response sent to the client.  This is typically a simple JSON mapping.  
     * `@RequestParam` maps a method parameter to a request key-value pair.
-* `@AutoWired` tells Spring to invoke the method/constructor.  Any parameters are "made available" recursively.
+* `@AutoWired` tells Spring to invoke the method/constructor (may be inferred automatically).  Any parameters are "made available" recursively.
 * `@Value('${foo.bar})` parameter annotations uses configuration value for `foo.bar`.  
 * If a parameter can be provided by invoking a uniquely identifed bean, Spring will instantiate it.
 * Will end up in a docker instance on Liquid (so we need to code for Linux) and code built by Jenkins.
 
 Opinion:  Only use these things in constructors!
 
-Fact: The Magic only works for beans created by Spring, not with `new`. 
+Fact: The Magic only works for beans created by Spring, not for beans created with `new`. 
 
 
 -------
@@ -69,10 +76,10 @@ public InteractController(
 }
 ```
 
-Spring Boot looks in **17** different places to resolve `@Value`.
+Spring Boot looks in **17** different places to resolve `@Value`!
 
-For most purposes a property file available as `/config/application.properties` in the classpath is sufficient.
-(For values not available until runtime, see Launchers later)
+For most purposes a property file available as `/config/application.properties` in the classpath is sufficient. For values not available until runtime, see Launchers later.
+
 
 ```properties
 ...
@@ -93,8 +100,9 @@ https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-ext
 Use for:
 * Separation of code and configuration files according to needs.  
 * Allows for different Java versions in the same project.  Opinion: as of 2019 building and testing with Java 11 and running in production with Java 8 is a sweet spot.
-* Allows for different versions of configuration files, for e.g. development and automated tests.
-* Super-duper-deluxe parent pom at top-most level is most IDE-friendly - we want to avoid e.g. Eclipse ProjectSets.
+* Have a "development" corner where `mvn clean install` finished quickly and does not depend on network resources.
+* Allows for different versions of configuration files depending on usage, for e.g. development and automated tests.
+* Super-duper-deluxe parent pom at top-most level is most IDE-friendly - we want to avoid e.g. Eclipse ProjectSets.  Tested with Eclipse/IntelliJ/Netbeans.
 * Business Core team provides `dk.tdc.businescore:bc-java-microservices` parent pom for setting everything up.  Most dependency versions can be specified using a property.
 
 ----
@@ -102,7 +110,7 @@ Use for:
 # mvn org.qunix:structure-maven-plugin:modules
 
      interact-data-service-parent
-                                \__ interact-data-service-development
+                                \__ interact-data-service-development  <-- development/pom.xml
                                 :       |__ jars-not-in-maven-central
                                 :       |__ tande-common-maven-helpers
                                 :       |__ common-data-service-api
@@ -125,11 +133,11 @@ Helper methods for e.g. localizing file resources when we _know_ that this code 
 be run from within an IDE or Maven itself.  Useful for localizing existing data files in the project file system,
 or the Maven target folder to delegate the clean up process to Maven.  
 
-Works by asking the JVM about the physical location of the byte code used to create the class.   
 
 
-* `getRequiredPathTowardsRoot(this, "target")`
-* `getTempFolderUnderPath(path)`
+* `getRequiredPathTowardsRoot(this, "target")` - asks the JVM about the physical location of the byte code used to create the class and then going upwards to the root of the drive.   
+
+* `getTempFolderUnderPath(path)` - uses current system time to derive a unique directory name and creates it
 
 See `FileLogControllerTest`
 
@@ -137,8 +145,7 @@ See `FileLogControllerTest`
 
 # Launcher
 
-(Not immediately related to any other concept, it is just what I named this technique which was originally inspired 
-by Eclipse Launch Configurations.  Suggestions for a better name are welcome)
+Note: Not immediately related to any other concept, it is just what I named this technique which was originally inspired by Eclipse Launch Configurations.  Suggestions for a better name are welcome
 
 * Sets up the environment before starting the actual application and cleans up afterwards.
 * _Knows_ it runs in an IDE/Maven-invocation, and belongs to a Maven project present on disk.
@@ -151,14 +158,13 @@ See `InteractDataServiceLauncher`
 
 # Docker
 
-Our code will end up in a docker instance.  For Liquid this we should aim for a OpenJDK 8 under Linux, as this
-is what they provide. 
+Our code will end up in a docker instance.  For Liquid this we should code for a OpenJDK 8 under Linux, as this is what they provide. 
  
 We can run the images built locally on developer machines using Windows 10 using Docker for Windows.
 
-Locally:  `Dockerfile`
-Local orchestration of multiple docker instances:  `docker-compose.yml`
-OpenShift: `build.yml`  (typically very small as it just configures the Jenkins pipeline)
+* Locally:  `Dockerfile`
+* Local orchestration of multiple docker instances:  `docker-compose.yml`
+* OpenShift: `build.yml`  (typically very small as it just configures the Jenkins pipeline)
 
 I have build the CIP sources using a suitable .NET Core docker instance in 2018-12. 
 
@@ -170,13 +176,11 @@ What is our Docker-experience?
 
 Much easier to create structures to provide as test data and to assert against afterwards
 
-Also forces us
-to figure out how to solve any problems related to the new module system introduced in Java 9 onwards without influencing 
-production code.
-
+Also forces us to figure out how to solve any problems related to the new module system introduced in Java 9 onwards without influencing production code.
 
 * `var x = ....`
-* `List.of(..)` + `Map.of(...)` + ´Set.of(...)`
+* `List.of(..)` + `Map.of(...)` + `Set.of(...)`
+* Generated finite stream support.
 
 Move unit tests from src/test to a sister project. 
 
@@ -188,14 +192,13 @@ Move unit tests from src/test to a sister project.
 Documentation:
 ---
 
-_What_ is what the code does.  We need to be better at capturing the answers to _why_ in the documentation!
+_What_ is what the code does.  We need to be better at capturing the answers to _why_ in the documentation!  For this it is important to use the right tools.
 
 For documentation _inside_ code, use javadoc (HTML sprinkled over the Java source and extracted by the javadoc tool).
 
-For documentation _outside_ code, use the **MarkDown** format in e.g. "README.md" files.
+For documentation _outside_ code, use the **MarkDown** format in e.g. "README.md" files.  (Blame github!)
 
-Possible discussion:  How can we ensure that documentation is adequate and up to date in a way that would
-work for all of us on a day to day basis?
+Possible discussion:  How can we ensure that documentation is adequate and up to date in a way that would work for all of us on a day to day basis?
 
 
 -----------
@@ -213,8 +216,7 @@ Github has made "markdown" popular, with their automatic rendering of README.md 
 * And some inline code: `List<String> l = new ArrayList<String>();`
 ```
 
-In recent years there has been a need for a documentation format which could provide more than raw ASCII text
-(most prefer URL's to be clickable) but simpler than HTML.   
+In recent years there has been a need for a documentation format which could provide more than raw ASCII text (most prefer URL's to be clickable) but simpler than HTML.   
 
 1. Numbered lists are easy.
 1. and it is readable in a normal text editor.
@@ -231,11 +233,13 @@ Github has made "markdown" popular, with their automatic rendering of README.md 
 # Miscellaneous
 
 * Use `mvn` a lot from the command line.  This needs to work 100% correctly. (An easy way is to download and unpack an official Maven distribution and create a small `mvn.cmd` file which sets JAVA_HOME and invokes the unpacked mvn)
-* `mvnw` in the project is getting traction.
+* `mvnw` living in the project is getting traction.
 * Eclipse doesn't emulate Maven classpath correctly.  `src/main/java` and `src/test/java` are not separate.
 
 
-An experiment in documenting live Java code with Markdown: https://github.com/ravn/dagger2-hello-world/blob/master/README.md
+An experiment in documenting **live** Java code with Markdown: https://github.com/ravn/dagger2-hello-world/blob/master/README.md
+
+An experiment in writing presentations in Markdown using Docker to convert to presentation: https://github.com/m86194/tande-presentations/tree/master/2019-01-28-tips-and-tricks
 
 -------
 
