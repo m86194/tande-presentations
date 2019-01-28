@@ -1,3 +1,5 @@
+rem Install Docker for Windows first!
+rem
 rem https://github.com/jagregory/pandoc-docker
 rem docker run jagregory/pandoc
 rem 
