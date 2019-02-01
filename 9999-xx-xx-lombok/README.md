@@ -9,3 +9,4 @@ https://docs.google.com/presentation/d/14u_h-lMn7f1rXE1nDiLX0azS3IkgjGl5uxp5jGJ7
 
 Blog entry comparing Lombok, Immutables and AutoValue (2016): http://marxsoftware.blogspot.com/2016/06/lombok-autovalue-immutables.html
 
+interact-data-service test - Lombok beans are mutable, not directly replacable by AutoValue.  Builders get very messy if refactoring code that expects mutable beans.
