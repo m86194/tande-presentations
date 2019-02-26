@@ -49,6 +49,8 @@ How can we make a single file that is:
 That is, no preprocessor step as neither `javac` nor Github rendering
 supports this.
 
+Github Markdown:  https://guides.github.com/features/mastering-markdown/
+
 # Easy!
 
 1. Put Markdown in `/* .... */` blocks.
