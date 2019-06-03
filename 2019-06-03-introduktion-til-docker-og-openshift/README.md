@@ -4,11 +4,13 @@
 
 En hurtig introduktion til Docker og OpenShift.
 
-Thorbjørn Ravn Andersen
-
-<tande@tdc.dk>
+Thorbjørn Ravn Andersen <tande@tdc.dk>
 
 2019-06-03
+
+
+<https://github.com/m86194/tande-presentations/tree/master/2019-06-03-introduktion-til-docker-og-openshift>
+
 
 ---
 
